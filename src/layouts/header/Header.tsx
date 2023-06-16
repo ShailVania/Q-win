@@ -1,13 +1,11 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import CheckIfAdmin from "../../config/CheckIfAdmin"
-import { LOCAL_STORAGE } from "../../config/localStorage"
-import "./header.css"
+import CheckIfAdmin from "../../../../hey/qwin/src/config/CheckIfAdmin"
+import { LOCAL_STORAGE } from "../../../../hey/qwin/src/config/localStorage"
 
 export default function Header() {
   const navigate = useNavigate()
   const [isAdmin, setIsAdmin] = useState(LOCAL_STORAGE.isAdmin())
-
 
   return (
     <nav className="navbar navbar-expand navbar-light bg-light">
@@ -19,7 +17,7 @@ export default function Header() {
         <ul className="navbar-nav mb-2 mb-lg-0">
           <li className="me-1">
             <a href="/">
-              <img src={require("../../assets/qwin-logo.jpg")} height="auto" width={"40"} alt="Qwin Logo" />
+              <img src={require("../../../../hey/qwin/src/assets/qwin-logo.jpg")} height="auto" width={"40"} alt="Qwin Logo" />
             </a>
           </li>
           <li className="nav-item nav-link" style={{ fontSize: "2em" }} onClick={() => navigate("/")}>
@@ -38,10 +36,18 @@ export default function Header() {
             onClick={() => navigate("/qr-scanner")}
           ></i>
         )}
-        <i
-          className="fa-regular navbar-icon fa-user text-reset fa-2xl me-3 dropdown-toggle hidden-arrow alink"
-          onClick={() => navigate("/profile")}
-        ></i>
+        {isAdmin ? null : (
+          <i
+            className="fa-regular navbar-icon fa-user text-reset fa-2xl me-3 dropdown-toggle hidden-arrow alink"
+            onClick={() => navigate("/profile")}
+          ></i>
+        )}
+        {isAdmin ? (
+          <i
+            onClick={() => navigate("/dashboard")}
+            className="fa-solid navbar-icon fa-table fa-2xl me-3 dropdown-toggle hidden-arrow alink"
+          ></i>
+        ) : null}
       </div>
     </nav>
   )
