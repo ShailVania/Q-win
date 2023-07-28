@@ -1,13 +1,13 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit"
-import { getAuth, getRedirectResult } from "firebase/auth"
-import firebase from "firebase/compat"
+import { getAuth, getRedirectResult, signInWithPopup } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
-import { setLoading } from "../../config/commonSlice"
-import { FIREBASE_COLLECTIONS } from "../../config/helper"
-import { firestore, firestoreV9 } from "../../config/IntialiseFirebase"
-import { LOCAL_STORAGE } from "../../config/localStorage"
-import { AppDispatch } from "../../store/store"
-import { initialUserProfile, UserDetails } from "../profile/profileSlice"
+import * as firebase from "firebase/compat/app"
+import { setLoading } from "../../../../hey/qwin/src/config/commonSlice"
+import { FIREBASE_COLLECTIONS, USER_ROLES } from "../../../../hey/qwin/src/config/helper"
+import { firestore, firestoreV9, microsoftProvider } from "../../../../hey/qwin/src/config/IntialiseFirebase"
+import { LOCAL_STORAGE } from "../../../../hey/qwin/src/config/localStorage"
+import { AppDispatch } from "../../../../hey/qwin/src/store/store"
+import { initialUserProfile, UserDetails } from "../../../../hey/qwin/src/layouts/profile/profileSlice"
 
 const initialState: UserDetails = initialUserProfile
 
@@ -29,9 +29,12 @@ export const getUserFromFirestore = (userID: string) => async (dispatch: AppDisp
         events_attended: data.events_attended,
         user_events: data.user_events,
         userID: data.userID,
+        userRole: data.userRole || USER_ROLES.Student,
       }
+      console.log("User Details: ", user)
+
       dispatch(storeUserLocal(user))
-      window.location.href = "/"
+      return user
     } else throw Error("User Not Found")
   } catch (error) {
     console.log("Error Getting User From Firestore", error)
@@ -46,7 +49,7 @@ export const handleLoginFlow = () => async (dispatch: AppDispatch) => {
 
   // validate user object
   const auth = getAuth()
-  const redirectResult = await getRedirectResult(auth)
+  const redirectResult = await signInWithPopup(auth, microsoftProvider)
   if (redirectResult) {
     const user: UserDetails = { ...initialUserProfile }
     user.name = redirectResult.user.displayName || ""
@@ -60,8 +63,13 @@ export const handleLoginFlow = () => async (dispatch: AppDispatch) => {
       console.log("Login Flow")
       if (user.name && user.email && user.userID) {
         // get the user from firebase, if error, then create new
-        await dispatch(getUserFromFirestore(user.userID))
+        const existingUser = await dispatch(getUserFromFirestore(user.userID))
         dispatch(setLoading(false))
+        // to redirect user to event listing page
+        // but check if user has Student ID, Mobile No and Term Selected
+        console.log("\nLogin > Existing User\n ", existingUser)
+        if (existingUser.studentID && existingUser.program && existingUser.mobileNo) window.location.href = "/"
+        else window.location.href = "/profile"
       }
     } catch (error) {
       console.log("Creating New User")
@@ -72,9 +80,10 @@ export const handleLoginFlow = () => async (dispatch: AppDispatch) => {
         .set(
           {
             name: user.name,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAt: firebase.default.firestore.FieldValue.serverTimestamp(),
             email: user.email,
             userID: user.userID,
+            userRole: USER_ROLES.Student,
           },
           { merge: true }
         )
@@ -101,20 +110,24 @@ export const loginSlice = createSlice({
     storeUser: (state, action: PayloadAction<undefined | UserDetails>) => {
       if (action.payload) {
         state = action.payload
+        if (!action.payload.events_attended) state.events_attended = []
+        if (!action.payload.user_events) state.user_events = []
+        if (!action.payload.program) state.program = ""
         console.log(action.payload)
 
         firestore
           .collection("users")
           .doc(action.payload.userID)
-          .set(action.payload, { merge: true })
+          .set(state, { merge: true })
           .then((res) => {
-            window.location.href = "/events"
+            window.location.href = "/"
           })
       }
       LOCAL_STORAGE.storeUser(state)
     },
     storeUserLocal: (state, action: PayloadAction<UserDetails>) => {
       LOCAL_STORAGE.storeUser(action.payload)
+      LOCAL_STORAGE.getUserRole(action.payload.userRole)
       state = action.payload
       return { ...state }
     },
@@ -128,13 +141,7 @@ export const loginSlice = createSlice({
   },
 })
 
-export const {
-  loginError,
-  loginSuccess,
-  loginWithMicrosoft,
-  storeUser,
-  getUserLocal,
-  storeUserLocal,
-} = loginSlice.actions
+export const { loginError, loginSuccess, loginWithMicrosoft, storeUser, getUserLocal, storeUserLocal } =
+  loginSlice.actions
 
 export default loginSlice.reducer
