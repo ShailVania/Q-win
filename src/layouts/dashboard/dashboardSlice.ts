@@ -1,9 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit"
 import { collection, getDocs } from "firebase/firestore"
-import { FIREBASE_COLLECTIONS } from "../../config/helper"
-import { firestoreV9 } from "../../config/IntialiseFirebase"
-import { AppDispatch } from "../../store/store"
-import { UserDetails } from "../profile/profileSlice"
+import { FIREBASE_COLLECTIONS } from "../../../../hey/qwin/src/config/helper"
+import { firestoreV9 } from "../../../../hey/qwin/src/config/IntialiseFirebase"
+import { AppDispatch } from "../../../../hey/qwin/src/store/store"
+import { UserDetails } from "../../../../hey/qwin/src/layouts/profile/profileSlice"
 
 export interface Dashboard {
   users: UserDetails[]
